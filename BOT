@@ -1,0 +1,135 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from Secret import username, password
+from Data import Data
+import time
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.keys import Keys
+import xlrd
+import csv
+
+
+# Select how long the bot waits for a page to load, before shutting down
+wait_time = 20
+
+list = [
+    Data('Name', 'Lastname', 'DOB', 'DOS')
+]
+
+
+# opens Chrome
+driver = webdriver.Chrome('C://Users/henrikas.budrys/ChromeDriver/chromedriver.exe')
+driver.get('https://provider.linkhealth.com/apps/secure/dashboards/provider-dashboard/')
+
+# Log in to web by using credentials from Secret.py
+def log_in_to_web():
+    button = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, '//*[@id="SignIn"]')))
+    time.sleep(1)
+    driver.find_element_by_xpath('//*[@id="userNameId_input"]').send_keys(username)
+    driver.find_element_by_xpath('//*[@id="passwdId_input"]').send_keys(password)
+    button.click()
+
+log_in_to_web()
+
+
+# Goes to "Claims Link" tab
+def open_claims():
+    claims = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, '//*[@id="app"]/div/div[1]/div[2]/div[2]/div[5]/div[5]')))
+    claims.click()
+
+open_claims()
+
+
+# If the TIN checkbox is not selected, clicks on it
+def check_box():
+    if not driver.find_element_by_xpath('// *[ @ id = "search-provider-tinonly"]').is_selected():
+        driver.find_element_by_xpath('// *[ @ id = "search-provider-tinonly"]').click()
+
+
+# Fills in users credentials
+def look_up_status():
+    submit = WebDriverWait(driver, wait_time).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@id="submit-search-button"]')))
+    check_box()
+    time.sleep(1)
+    driver.find_element_by_xpath('//*[@id="select-radio-membername-dob"]').click()
+    driver.find_element_by_xpath('//*[@id="select-lastname-input"]').send_keys(Keys.CONTROL + "a", Keys.DELETE)
+    driver.find_element_by_xpath('//*[@id="select-lastname-input"]').send_keys(line.last_name)
+    driver.find_element_by_xpath('//*[@id="select-firstname-input"]').send_keys(Keys.CONTROL + "a", Keys.DELETE)
+    driver.find_element_by_xpath('//*[@id="select-firstname-input"]').send_keys(line.name)
+    driver.find_element_by_xpath('//*[@id="select-dob-input"]').clear()
+    driver.find_element_by_xpath('//*[@id="select-dob-input"]').click()
+    driver.find_element_by_xpath('//*[@id="select-dob-input"]').send_keys(line.dob)
+    driver.find_element_by_xpath('//*[@id="select-startdate-input"]').clear()
+    driver.find_element_by_xpath('//*[@id="select-startdate-input"]').click()
+    driver.find_element_by_xpath('//*[@id="select-startdate-input"]').send_keys(line.dos)
+    driver.find_element_by_xpath('//*[@id="select-enddate-input"]').clear()
+    driver.find_element_by_xpath('//*[@id="select-enddate-input"]').click()
+    driver.find_element_by_xpath('//*[@id="select-enddate-input"]').send_keys(line.dos)
+    submit.click()
+
+
+# Checks if claim status is found or not
+def check_exists_by_xpath(xpath):
+    try:
+        driver.find_element_by_xpath(xpath)
+    except NoSuchElementException:
+        return False
+    return True
+
+
+# Scrape info from primary claim status page
+def scrape_primary():
+    sort_by_age = WebDriverWait(driver, wait_time).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@id="root"]/div/div[4]/div[2]/div/div/div[2]/div[3]/div/div[2]/div[1]/div[1]/div/div[1]')))
+    sort_by_age.click()
+    sort_by_age.click()
+    time.sleep(1)
+    status = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div/div[2]/div[3]/div/div[2]/div[1]/div[2]/div[1]/div/div[8]/div')
+    claim_status = status.get_attribute('innerHTML')
+    return str(claim_status)
+
+
+# Scrape info from secondary claim status page
+def scrape_secondary():
+    driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div/div[2]/div[3]/div/div[2]/div[1]/div[2]/div[1]/div/div[3]').click()
+    select_all_columns = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, '// *[ @ id = "toggle-selection-select-all-columns"]')))
+    select_all_columns.click()
+    claimnr = driver.find_element_by_xpath('//*[@id="summary-data-claimnumber"]')
+    billed = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div[5]/div[3]/div/div/div[2]/table/tbody[2]/tr[2]/td[7]/div/span')
+    paid = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div[5]/div[3]/div/div/div[2]/table/tbody[2]/tr[2]/td[8]/div/span')
+    allowed = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div[5]/div[3]/div/div/div[2]/table/tbody[2]/tr[2]/td[9]/div/span')
+    pr = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div[5]/div[3]/div/div/div[2]/table/tbody[2]/tr[2]/td[12]/div/span')
+    claim_number = claimnr.get_attribute('innerHTML')
+    billed_amount = billed.get_attribute('innerHTML')
+    paid_amount = paid.get_attribute('innerHTML')
+    allowed_amount = allowed.get_attribute('innerHTML')
+    patient_responsibility = pr.get_attribute('innerHTML')
+    return str(claim_number), str(billed_amount), str(paid_amount), str(allowed_amount), str(patient_responsibility)
+
+# Main program
+with open('C://Users/henrikas.budrys/Desktop/UHC BOT/UHC_status.csv', 'w', newline='') as f:
+    times_checked = 0
+    writer = csv.writer(f)
+    writer.writerow(['Claim Status', 'CC#', 'Charge', 'Allowed Amount', 'Paid Amount', 'PR'])
+    f.flush()
+    for line in list:
+        times_checked += 1
+        look_up_status()
+        time.sleep(2)
+        print("\nChecking claim status Nr. " + str(times_checked) + ":")
+        if check_exists_by_xpath('//*[@id="search-warning-message"]/div'):
+            print('Claim status not found :c')
+            writer.writerow(['Claim status not found'])
+            f.flush()
+        else:
+            info1 = scrape_primary()
+            print(info1)
+            info2 = scrape_secondary()
+            print(info2)
+            writer.writerow([info1, info2[0], info2[1], info2[2], info2[3], info2[4]])
+            f.flush()
+            driver.back()
+            driver.back()
