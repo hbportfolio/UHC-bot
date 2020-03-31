@@ -9,24 +9,50 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 import xlrd
 import csv
+from bs4 import BeautifulSoup as soup
 
 
+# Choose the delay between certain action of the BOT (depending on how fast/slow the system runs)
+optimization = 2
 # Select how long the bot waits for a page to load, before shutting down
 wait_time = 20
+# BOT will look for Excel file and save a new file here
+loc = 'C://Users/henrikas.budrys/Desktop/UHC BOT/'
+# BOT will save claim details here
+files_loc = 'C://Users/henrikas.budrys/Desktop/UHC BOT/Downloaded PDFs/'
+# Name of Excel the BOT reads
+current_file = 'UHC_scrape.xlsx'
+# BOT creates new Excel and calls it
+new_file = 'UHC_status.csv'
 
-list = [
-    Data('Name', 'Lastname', 'DOB', 'DOS')
-]
+wb = xlrd.open_workbook(loc + current_file)
+sheet = wb.sheet_by_index(0)
+
+# Read Excel file
+list = []
+for i in range(sheet.nrows)[1:]:
+    name = sheet.row_values(i)[0]
+    lastname = sheet.row_values(i)[1]
+    dob = sheet.row_values(i)[2]
+    dos = sheet.row_values(i)[3]
+    proper_dob = xlrd.xldate_as_tuple(dob, wb.datemode)
+    us_dob = str(proper_dob[1]) + '/' + str(proper_dob[2]) + '/' + str(proper_dob[0])
+    proper_dos = xlrd.xldate_as_tuple(dos, wb.datemode)
+    us_dos = str(proper_dos[1]) + '/' + str(proper_dos[2]) + '/' + str(proper_dos[0])
+    voucher = int(sheet.row_values(i)[4])
+    client = sheet.row_values(i)[5]
+    list.append(Data(name, lastname, us_dob, us_dos, voucher, client))
 
 
-# opens Chrome
+# Opens Chrome
 driver = webdriver.Chrome('C://Users/henrikas.budrys/ChromeDriver/chromedriver.exe')
 driver.get('https://provider.linkhealth.com/apps/secure/dashboards/provider-dashboard/')
+
 
 # Log in to web by using credentials from Secret.py
 def log_in_to_web():
     button = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, '//*[@id="SignIn"]')))
-    time.sleep(1)
+    time.sleep(optimization)
     driver.find_element_by_xpath('//*[@id="userNameId_input"]').send_keys(username)
     driver.find_element_by_xpath('//*[@id="passwdId_input"]').send_keys(password)
     button.click()
@@ -42,10 +68,98 @@ def open_claims():
 open_claims()
 
 
+def switch_to_HMG():
+    button = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="search-provider-changebtn"]')))
+    button.click()
+    time.sleep(optimization)
+    provider = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[1]/div/div')))
+    provider.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-organizations-option-2"]').click()
+    time.sleep(optimization)
+    corporate = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[2]/div/div/div[1]')))
+    corporate.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-corporates-option-0"]').click()
+    time.sleep(optimization)
+    taxid = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[3]/div/div/div[1]')))
+    taxid.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-taxidnumbers-option-0"]').click()
+    time.sleep(optimization)
+    care = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[4]/div/div/div[1]')))
+    care.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-providers-option-0"]').click()
+    time.sleep(optimization)
+    driver.find_element_by_xpath('//*[@id="provider-select-submit"]').click()
+    time.sleep(optimization + 1)
+
+
+def switch_to_RDMGA():
+    button = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="search-provider-changebtn"]')))
+    button.click()
+    time.sleep(optimization)
+    provider = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[1]/div/div')))
+    provider.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-organizations-option-8"]').click()
+    time.sleep(optimization)
+    corporate = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[2]/div/div/div[1]')))
+    corporate.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-corporates-option-0"]').click()
+    time.sleep(optimization)
+    taxid = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[3]/div/div/div[1]')))
+    taxid.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-taxidnumbers-option-0"]').click()
+    time.sleep(optimization)
+    care = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[4]/div/div/div[1]')))
+    care.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-providers-option-0"]').click()
+    time.sleep(optimization)
+    driver.find_element_by_xpath('//*[@id="provider-select-submit"]').click()
+    time.sleep(optimization + 1)
+
+
+def switch_to_RDMG():
+    button = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="search-provider-changebtn"]')))
+    button.click()
+    time.sleep(optimization + 1)
+    provider = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[1]/div/div')))
+    provider.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-organizations-option-7"]').click()
+    time.sleep(optimization + 1)
+    corporate = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[2]/div/div/div[1]')))
+    corporate.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-corporates-option-5"]').click()
+    time.sleep(optimization + 1)
+    taxid = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[3]/div/div/div[1]')))
+    taxid.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-taxidnumbers-option-0"]').click()
+    time.sleep(optimization + 1)
+    care = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH,
+        '//*[@id="change-provider-modal"]/div[2]/fieldset/div[4]/div/div/div[1]')))
+    care.click()
+    driver.find_element_by_xpath('//*[@id="react-select-provider-select-providers-option-0"]').click()
+    time.sleep(optimization + 1)
+    driver.find_element_by_xpath('//*[@id="provider-select-submit"]').click()
+    time.sleep(optimization + 1)
+
+
 # If the TIN checkbox is not selected, clicks on it
 def check_box():
     if not driver.find_element_by_xpath('// *[ @ id = "search-provider-tinonly"]').is_selected():
         driver.find_element_by_xpath('// *[ @ id = "search-provider-tinonly"]').click()
+
 
 
 # Fills in users credentials
@@ -53,21 +167,20 @@ def look_up_status():
     submit = WebDriverWait(driver, wait_time).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="submit-search-button"]')))
     check_box()
-    time.sleep(1)
+    time.sleep(optimization)
     driver.find_element_by_xpath('//*[@id="select-radio-membername-dob"]').click()
     driver.find_element_by_xpath('//*[@id="select-lastname-input"]').send_keys(Keys.CONTROL + "a", Keys.DELETE)
     driver.find_element_by_xpath('//*[@id="select-lastname-input"]').send_keys(line.last_name)
     driver.find_element_by_xpath('//*[@id="select-firstname-input"]').send_keys(Keys.CONTROL + "a", Keys.DELETE)
     driver.find_element_by_xpath('//*[@id="select-firstname-input"]').send_keys(line.name)
+    time.sleep(optimization/2)
     driver.find_element_by_xpath('//*[@id="select-dob-input"]').clear()
     driver.find_element_by_xpath('//*[@id="select-dob-input"]').click()
-    driver.find_element_by_xpath('//*[@id="select-dob-input"]').send_keys(line.dob)
+    driver.find_element_by_xpath('//*[@id="select-dob-input"]').send_keys(line.us_dob)
+    time.sleep(optimization/2)
     driver.find_element_by_xpath('//*[@id="select-startdate-input"]').clear()
     driver.find_element_by_xpath('//*[@id="select-startdate-input"]').click()
-    driver.find_element_by_xpath('//*[@id="select-startdate-input"]').send_keys(line.dos)
-    driver.find_element_by_xpath('//*[@id="select-enddate-input"]').clear()
-    driver.find_element_by_xpath('//*[@id="select-enddate-input"]').click()
-    driver.find_element_by_xpath('//*[@id="select-enddate-input"]').send_keys(line.dos)
+    driver.find_element_by_xpath('//*[@id="select-startdate-input"]').send_keys(line.us_dos)
     submit.click()
 
 
@@ -86,7 +199,7 @@ def scrape_primary():
         EC.presence_of_element_located((By.XPATH, '//*[@id="root"]/div/div[4]/div[2]/div/div/div[2]/div[3]/div/div[2]/div[1]/div[1]/div/div[1]')))
     sort_by_age.click()
     sort_by_age.click()
-    time.sleep(1)
+    time.sleep(optimization)
     status = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div/div[2]/div[3]/div/div[2]/div[1]/div[2]/div[1]/div/div[8]/div')
     claim_status = status.get_attribute('innerHTML')
     return str(claim_status)
@@ -95,8 +208,10 @@ def scrape_primary():
 # Scrape info from secondary claim status page
 def scrape_secondary():
     driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div/div[2]/div[3]/div/div[2]/div[1]/div[2]/div[1]/div/div[3]').click()
+    time.sleep(optimization)
     select_all_columns = WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, '// *[ @ id = "toggle-selection-select-all-columns"]')))
     select_all_columns.click()
+    time.sleep(optimization)
     claimnr = driver.find_element_by_xpath('//*[@id="summary-data-claimnumber"]')
     billed = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div[5]/div[3]/div/div/div[2]/table/tbody[2]/tr[2]/td[7]/div/span')
     paid = driver.find_element_by_xpath('//*[@id="root"]/div/div[4]/div[2]/div/div[5]/div[3]/div/div/div[2]/table/tbody[2]/tr[2]/td[8]/div/span')
@@ -109,27 +224,67 @@ def scrape_secondary():
     patient_responsibility = pr.get_attribute('innerHTML')
     return str(claim_number), str(billed_amount), str(paid_amount), str(allowed_amount), str(patient_responsibility)
 
+# Expands table
+def expand_status():
+    driver.find_element_by_xpath(
+        '//*[@id="root"]/div/div[4]/div[2]/div/div[5]/div[3]/div/div/div[2]/table/thead/tr/th[1]/div/button').click()
+
+
+def scrape_all_data():
+    content = driver.page_source
+    page_soup = soup(content, 'html.parser')
+    boxes_main = page_soup.findAll('div', {'class': 'box'})
+    voucher_number_main = page_soup.findAll('p', {'id': 'summary-data-patientaccountnumber'})
+    billing_provider = page_soup.findAll('span', {'id': 'providerinfo-label-billingprovider'})
+    act_billing_provider = page_soup.findAll('p', {'id': 'providerinfo-data-billingprovider'})
+    claim_number_main = page_soup.findAll('span', {'id': 'claiminfo-label-claimnumber'})
+    ccnr = page_soup.findAll('p', {'id': 'claiminfo-data-claimnumber'})
+    table_main = boxes_main[2].table
+    file = open(files_loc + str(line.voucher) + '_' + str(proper_dos[1]) + '.' + str(proper_dos[2]) + '.' + str(proper_dos[0]) + '.html', 'w')
+    file.write('Voucher number:\n' + str(voucher_number_main) + str(billing_provider) + str(act_billing_provider)
+               + str(claim_number_main) + str(ccnr) + str(table_main) + str(boxes_main[3]))
+    file.close()
+
+
 # Main program
-with open('C://Users/henrikas.budrys/Desktop/UHC BOT/UHC_status.csv', 'w', newline='') as f:
+with open(loc + new_file, 'w', newline='') as f:
     times_checked = 0
     writer = csv.writer(f)
-    writer.writerow(['Claim Status', 'CC#', 'Charge', 'Allowed Amount', 'Paid Amount', 'PR'])
+    writer.writerow(['Name', 'Lastname', 'DOB', 'DOS', 'Voucher number ', 'Client', 'Claim Status', 'CC#', 'Charge',
+                     'Allowed Amount', 'Paid Amount', 'PR'])
     f.flush()
+    current_client = ''
     for line in list:
         times_checked += 1
+        time.sleep(optimization)
+        if current_client != line.client:
+            if line.client == 'HMG':
+                switch_to_HMG()
+            elif line.client == 'RDMG':
+                switch_to_RDMG()
+            elif line.client == 'RDMGA':
+                switch_to_RDMGA()
+        current_client = line.client
         look_up_status()
-        time.sleep(2)
+        time.sleep(optimization + 1)
         print("\nChecking claim status Nr. " + str(times_checked) + ":")
+        print(line.client)
         if check_exists_by_xpath('//*[@id="search-warning-message"]/div'):
             print('Claim status not found :c')
-            writer.writerow(['Claim status not found'])
+            writer.writerow([line.name, line.last_name, line.us_dob, line.us_dos, line.voucher, line.client,
+                             'Claim status not found'])
             f.flush()
+            driver.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.HOME)
         else:
             info1 = scrape_primary()
             print(info1)
             info2 = scrape_secondary()
             print(info2)
-            writer.writerow([info1, info2[0], info2[1], info2[2], info2[3], info2[4]])
+            writer.writerow([line.name, line.last_name, line.us_dob, line.us_dos, line.voucher, line.client, info1,
+                             info2[0], info2[1], info2[2], info2[3], info2[4]])
             f.flush()
+            expand_status()
+            time.sleep(optimization + 1)
+            scrape_all_data()
             driver.back()
             driver.back()
