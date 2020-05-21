@@ -2,8 +2,16 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from Secret import username, password
-from Data import Data
+from Secret import username, password # log in details in an external file
+from Data import Data # class file to help store info. Example:
+# class Data:
+#     def __init__(self, name, last_name, us_dob, us_dos, voucher, client):
+#         self.name = name
+#         self.last_name = last_name
+#         self.us_dob = us_dob
+#         self.us_dos = us_dos
+#         self.voucher = voucher
+#         self.client = client
 import time
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
@@ -270,7 +278,7 @@ with open(loc + new_file, 'w', newline='') as f:
         print("\nChecking claim status Nr. " + str(times_checked) + ":")
         print(line.client)
         if check_exists_by_xpath('//*[@id="search-warning-message"]/div'):
-            print('Claim status not found :c')
+            print('Claim status not found')
             writer.writerow([line.name, line.last_name, line.us_dob, line.us_dos, line.voucher, line.client,
                              'Claim status not found'])
             f.flush()
