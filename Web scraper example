@@ -1,0 +1,77 @@
+import time
+import concurrent.futures
+import xlrd
+import csv
+import requests
+from bs4 import BeautifulSoup
+from bs4 import SoupStrainer
+from menu import Link
+
+
+def read_initial_file(location):
+    primary_list = []
+    wb = xlrd.open_workbook(location)
+    sheet = wb.sheet_by_index(0)
+    for i in range(sheet.nrows)[1:]:
+        try:
+            category = sheet.row_values(i)[0]
+            link = sheet.row_values(i)[1]
+            img_link = sheet.row_values(i)[2]
+            primary_list.append(Link(category, link, img_link))
+        except:
+            pass
+    return primary_list
+
+
+def get_details(link):
+    description = ''
+    session = requests.Session()
+    response = session.get(link)
+    strainer = SoupStrainer('div', attrs={'class': 'value'})
+    strainer1 = SoupStrainer('span', {'class': 'price'})
+    strainer2 = SoupStrainer('span', {'class': 'base'})
+    soup = BeautifulSoup(response.content, 'lxml', parse_only=strainer)
+    p_description = soup.findAll('p')
+    for desc in p_description:
+        description += desc.getText(strip=True) + '\n'
+    brand_name = soup.div.getText(strip=True)
+    price = BeautifulSoup(response.content, 'lxml', parse_only=strainer1).span.getText(strip=True)
+    name = BeautifulSoup(response.content, 'lxml', parse_only=strainer2).getText(strip=True)
+    return name, price, brand_name, description
+
+
+def write_output(temp_list):
+    with open('C://Users/henri/OneDrive/Desktop/Images/Write2/en.xls', 'w', encoding='utf-8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Product Name', 'Price', 'Brand', 'Description', 'Category', 'Image Link'])
+        f.flush()
+        for i, list_row in enumerate(temp_list):
+            try:
+                x = list(temp_list[i][0].result())
+                x.extend([temp_list[i][1], temp_list[i][2]])
+                writer.writerow(x)
+            except:
+                pass
+        f.flush()
+
+
+if __name__ == '__main__':
+    start = time.perf_counter()
+    # reads a provided file with Category, Link and Image Link
+    work_book = read_initial_file('C://Users/henri/OneDrive/Desktop/Images/Read.xls')
+
+    # temp_list collects information that was scraped from web
+    temp_list = []
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for row in work_book:
+            try:
+                temp_list.append([executor.submit(get_details, row.link), row.name, row.img_link.replace('\xa0', '')])
+            except:
+                pass
+
+    # writes temp_list into a file
+    print('Writing file.')
+    write_output(temp_list)
+
+    finish = time.perf_counter()
+    print(f'Finished in {round(finish - start, 2)} second(s)')
